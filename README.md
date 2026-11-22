@@ -19,7 +19,7 @@ Built binaries only, no source code:
   The launcher refuses any release whose signature does not match the key built into it.
 - `files/<sha256>`: the release files, named by their SHA-256; the launcher checks every hash before installing.
 
-Release 0.7.0 (launcher 0.7.0).
+Release 0.7.1 (launcher 0.7.1).
 
 ## Credits and notice
 
