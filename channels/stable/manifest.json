@@ -2,10 +2,10 @@
   "format": 1,
   "product": "brega",
   "channel": "stable",
-  "version": "0.7.1",
-  "published": "2026-11-22T06:22:59Z",
+  "version": "0.7.2",
+  "published": "2026-11-22T06:34:34Z",
   "min_launcher_version": "",
-  "notes": "Brega 0.7.1: Brega Loader now starts the mods in game (root-domain boot fix); alternator belt adjusting bolt sync; all car fluids sync (fuel on every car; CORRIS oil, coolant, brake fluid, gearbox oil); the launcher checks the mirrors at start and updates itself.",
+  "notes": "Brega 0.7.2 (protocol 13): jerry can contents sync, battery charger sync, house phone ringing sync. Both players need 0.7.2.",
   "files": [
     {
       "path": "Brega/brega.ini",
@@ -16,7 +16,7 @@
     {
       "path": "Brega/Brega.Loader.dll",
       "size": 131584,
-      "sha256": "bc74b8ce3ffdcfa70fd388edfb66e01e3fa8de3763b749baf697979193a9ef02",
+      "sha256": "9bbdc2d3b866cee29b13c397d8d651061357f3561f53541ff9a137a2a4795c43",
       "role": "loader-managed"
     },
     {
@@ -28,19 +28,19 @@
     {
       "path": "Brega/Mods/BregaFPS.dll",
       "size": 116736,
-      "sha256": "84f72f77d1e4a93421518cbcbb6e20d40d05acfaa9fe4a27d45b94e56a25cdcc",
+      "sha256": "dd6d4d22baf24e36a7fc3275368e9ac895cccfb01a2b825dc15edd293ee9c177",
       "role": "mod"
     },
     {
       "path": "Brega/Mods/BregaMP.dll",
-      "size": 1353728,
-      "sha256": "35f3e02edd9ad2f56f5cfb684710adc3cf8cb9a4b4cd287e781cac3a367544e0",
+      "size": 1375232,
+      "sha256": "b8efb32f532a33f954bc1ce21fb0cf651d6936edcf86db803db44184f37bd6f8",
       "role": "mod"
     },
     {
       "path": "Brega/version.txt",
       "size": 7,
-      "sha256": "81a4f39ce803f41d8ad9e492bd67a3feca70257d510ccc86f16e45a5e0b8df51",
+      "sha256": "f830bb7cd89e62355ac42abf47d4eb5f27a9ff1dac2d000e8390ca6807d5a891",
       "role": "config"
     },
     {
@@ -53,7 +53,7 @@
     {
       "path": "winhttp.dll",
       "size": 173568,
-      "sha256": "b439a02a67a4df8372d09c447191c281e3524fa2f3d9c503cdc1b57229287791",
+      "sha256": "63d1b466a5863af283bf3f1734dce7c04eef4ed4b6201157a033044c1b995f69",
       "role": "loader-native"
     }
   ]
