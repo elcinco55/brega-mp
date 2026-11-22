@@ -1,0 +1,905 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Brega.Loader</name>
+    </assembly>
+    <members>
+        <member name="T:Brega.Loader.Entry">
+            <summary>
+            Called once by the native loader (winhttp.dll) through mono_runtime_invoke, on the main thread, inside Unity's
+            child domain, during the first MonoBehaviour Awake/OnEnable/Start of the game. Must never throw.
+            </summary>
+        </member>
+        <member name="T:Brega.Loader.LoaderBehaviour">
+            <summary>The loader's persistent MonoBehaviour: scenes, lifecycle, per-frame dispatch, menu and UI.</summary>
+        </member>
+        <member name="T:Brega.Loader.ModHost">
+            <summary>Loader-side state of one mod.</summary>
+        </member>
+        <member name="F:Brega.Loader.ModHost.MenuLoaded">
+            <summary>Scene callbacks this mod has received in the current scene (reset on every scene change).</summary>
+        </member>
+        <member name="F:Brega.Loader.ModHost.Loaded">
+            <summary>Scene callbacks this mod has received in the current scene (reset on every scene change).</summary>
+        </member>
+        <member name="F:Brega.Loader.ModHost.PostLoaded">
+            <summary>Scene callbacks this mod has received in the current scene (reset on every scene change).</summary>
+        </member>
+        <member name="F:Brega.Loader.ModHost.DisplayName">
+            <summary>Menu strings, read once after load (mod getters are never called per frame by the menu).</summary>
+        </member>
+        <member name="F:Brega.Loader.ModHost.DisplayVersion">
+            <summary>Menu strings, read once after load (mod getters are never called per frame by the menu).</summary>
+        </member>
+        <member name="F:Brega.Loader.ModHost.DisplayAuthors">
+            <summary>Menu strings, read once after load (mod getters are never called per frame by the menu).</summary>
+        </member>
+        <member name="F:Brega.Loader.ModHost.DisplayDescription">
+            <summary>Menu strings, read once after load (mod getters are never called per frame by the menu).</summary>
+        </member>
+        <member name="T:Brega.Loader.LoaderSelf">
+            <summary>The loader's own settings page (About tab). Not listed as a mod.</summary>
+        </member>
+        <member name="T:Brega.ModApi.BregaMod">
+            <summary>
+            Base class of every Brega mod. Put one concrete subclass (public, parameterless constructor) in a DLL inside
+            &lt;game&gt;/Brega/Mods/. Every callback is isolated: an exception is logged with the mod id, and a mod that keeps
+            throwing (10 errors in 10 seconds, or 50 in total) is disabled.
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.OnSettings(Brega.ModApi.ModSettings)">
+            <summary>Build the settings page. Called once after the mod is created; stored values are applied right after.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.OnMenuLoad">
+            <summary>The main menu scene finished loading.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.OnLoad">
+            <summary>The GAME scene is ready (PLAYER and Systems exist).</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.PostLoad">
+            <summary>One frame after OnLoad of every mod.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.OnSave">
+            <summary>The game is about to save (a SAVEGAME toilet/bed was used), before any game object saves.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.OnUnload">
+            <summary>Leaving the GAME scene or quitting.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.OnEnabled">
+            <summary>The user enabled the mod in the Brega menu.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaMod.OnDisabled">
+            <summary>The user disabled the mod, or the loader disabled it after repeated errors.</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.Id">
+            <summary>Unique, stable id (also the config file name). Keep the MSCLoader ID when porting so settings carry over.</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.LoadOrder">
+            <summary>Lower runs first (then by Id).</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.MinApiVersion">
+            <summary>The mod is skipped when the loader's ModApi.ApiVersion is lower than this.</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.Enabled">
+            <summary>Disabled mods get no callbacks (except OnDisabled once). Setting this from a mod is allowed.</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.Logger">
+            <summary>
+            Console/log for this mod: loader.log, Unity's output_log ("[Brega][id]") and the in-game console. Named Logger
+            (not Log) so a mod's own static Log class keeps working inside its BregaMod subclass. Static code can use
+            ModConsole.Print / Log / Warning / Error instead.
+            </summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.Settings">
+            <summary>The settings page built in OnSettings.</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.ConfigFolder">
+            <summary>&lt;game&gt;/Brega/Config/&lt;Id&gt;/ for free-form mod files (created on first use).</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaMod.AssetsFolder">
+            <summary>&lt;game&gt;/Brega/Assets/&lt;Id&gt;/ for asset bundles, textures, sounds (created on first use).</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderCore.CurrentCallerId">
+            <summary>Id of the mod whose callback is running (null outside callbacks).</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderCore.CurrentCaller">
+            <summary>The mod whose callback is running (null outside callbacks; set during OnSettings too, before the mod is listed).</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderCore.PersistenceEnabled">
+            <summary>False when BregaConfig is missing or not writable: settings stay in memory for this session.</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderCore.StorageWarning">
+            <summary>Shown at the top of the Brega menu when the Brega folders are not usable (null when all is well).</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderCore.SceneMenuLoadDone">
+            <summary>Scene callbacks already dispatched in the current scene.</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderCore.SceneLoadDone">
+            <summary>Scene callbacks already dispatched in the current scene.</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderCore.ScenePostLoadDone">
+            <summary>Scene callbacks already dispatched in the current scene.</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.CanWrite(System.String,System.Collections.Generic.List{System.String})">
+            <summary>Creates and removes a small probe file in dir (our own folder) to see whether settings can be saved.</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.MigrateMscFiles(System.String,Brega.Shared.ModConfig)">
+            <summary>
+            First run only: copy the free-form files of the mod's MSCLoader settings folder (whatever the mod saved through
+            ModLoader.GetModSettingsFolder) into Brega/Config/&lt;id&gt;/, so a ported mod finds its data. Runs when that folder
+            does not exist yet and the config has no "migrated.files" mark. Never overwrites; the MSCLoader folder is only read.
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.TryImportMsc(System.String,Brega.Shared.ModConfig)">
+            <summary>First run only: read MSCLoader's settings for this id (read-only), from the launcher's copy or the original folder.</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.RunSceneCallback(Brega.Loader.ModHost,Brega.Loader.Callback)">
+            <summary>Runs a callback for an enabled mod and remembers which scene callbacks it has received.</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.BeginScene">
+            <summary>New scene: no scene callback has run yet (called by LoaderBehaviour before OnMenuLoad/OnLoad).</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.ReplayMissedSceneCallbacks(Brega.Loader.ModHost)">
+            <summary>
+            A mod enabled during a scene gets the scene callbacks it missed (OnMenuLoad in the main menu; OnLoad then
+            PostLoad in GAME), so mods that set up their state in OnLoad work before their first Update.
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.ReportCommandError(System.String,System.String,System.Exception)">
+            <summary>A console command threw: counts against its mod's error budget like any callback.</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.SaveMod(Brega.ModApi.BregaMod)">
+            <summary>Writes one mod's settings file now (ModSettings.SaveNow).</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.AutoSave">
+            <summary>Called every frame; writes changed settings at most every 2 seconds.</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderCore.CollectKeybinds(System.Collections.Generic.List{Brega.ModApi.SettingKeybind})">
+            <summary>
+            Every keybind of the loader and of the mods, as plain numbers for KeybindConflicts. When binds is not null it
+            receives the matching SettingKeybind objects (same order).
+            </summary>
+        </member>
+        <member name="P:Brega.Loader.LoaderCore.KeyInputBlocked">
+            <summary>True while the Brega menu captures a key, a menu text field has focus or the console is open: mod keybinds stay quiet.</summary>
+        </member>
+        <member name="T:Brega.Loader.LoaderLog">
+            <summary>Brega/loader.log (previous run kept as loader.prev.log) + Unity log + the in-game console buffer.</summary>
+        </member>
+        <member name="F:Brega.Loader.LoaderLog.Revision">
+            <summary>Changes whenever a line is added (the console tab scrolls to the end on change).</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderLog.SnapshotRange(System.Int32,System.Int32)">
+            <summary>Copy of count lines starting at start (clamped to the buffer).</summary>
+        </member>
+        <member name="M:Brega.Loader.LoaderLog.SnapshotTail(System.Int32)">
+            <summary>Copy of the last max console lines.</summary>
+        </member>
+        <member name="P:Brega.Loader.LoaderLog.Count">
+            <summary>Lines currently in the console buffer (at most MaxConsoleLines).</summary>
+        </member>
+        <member name="T:Brega.Loader.Game.ColliderBlocker">
+            <summary>
+            Disables a set of colliders and turns them back on later. MWC's 3D buttons and world interactions use PlayMaker
+            MousePickEvent / mouse raycasts, which ignore IMGUI, so the colliders behind our menu must be switched off.
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Game.ColliderBlocker.Block(UnityEngine.Transform,UnityEngine.Collider)">
+            <summary>Disables every enabled collider under root (active objects only), except keep.</summary>
+        </member>
+        <member name="M:Brega.Loader.Game.ColliderBlocker.BlockScene(UnityEngine.Collider)">
+            <summary>Disables every enabled collider of the active scene, except keep.</summary>
+        </member>
+        <member name="T:Brega.Loader.Game.GameInputBlock">
+            <summary>
+            Keeps the game from reacting to input while the Brega menu (or a Brega message box) is shown:
+            - the global FsmBool PlayerInMenu is held true (the game's "Update Cursor" FSM then stops mouse-look and frees the
+              cursor, the same way the game's own menus do) and restored afterwards;
+            - in GAME, the "Open Menu" FSM on Systems/OptionsDB (Esc/F1 open the pause menu, it does not check PlayerInMenu)
+              is paused, and resumed one frame after the menu closes, so the Esc that closes our menu does not open the pause
+              menu;
+            - in MainMenu, every collider of the scene is disabled so clicks do not reach the menu buttons behind us.
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Game.GameInputBlock.Tick(System.Boolean)">
+            <summary>Per frame: want = menu or message visible.</summary>
+        </member>
+        <member name="M:Brega.Loader.Game.GameInputBlock.Reset">
+            <summary>Scene change: undo everything now (the next Tick re-acquires if the menu is still open).</summary>
+        </member>
+        <member name="T:Brega.Loader.Game.PauseButton">
+            <summary>
+            Adds a "MODS" button to the game's pause menu (Systems/OptionsMenu/Menu) the first time it opens: a clone of
+            Btn_Graphics placed one row below Btn_PlayerControls; Btn_Reset and Btn_Quit move down one row and the "Table 3"
+            background grows by one row. The clone's PlayMaker FSM is disabled; our component handles hover and click.
+            Anything missing is logged and the button is skipped (the menu key still works).
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Game.PauseButton.GrowTable(UnityEngine.Transform,UnityEngine.Transform,UnityEngine.Vector3)">
+            <summary>Scales the table along the row axis so it covers one more row, keeping its first edge where it was.</summary>
+        </member>
+        <member name="M:Brega.Loader.Game.PauseButton.Extent(UnityEngine.Transform,UnityEngine.Transform,UnityEngine.Vector3,System.Single@,System.Single@)">
+            <summary>Extent of every mesh under root along dir, in menu-local space.</summary>
+        </member>
+        <member name="T:Brega.Loader.Game.PauseButtonBehaviour">
+            <summary>Hover colour and click for the cloned MODS button (raycast from the pause menu camera).</summary>
+        </member>
+        <member name="T:Brega.Loader.Game.SaveHook">
+            <summary>
+            Runs BregaMod.OnSave before the game saves. The game saves when a "Button" PlayMakerFSM on an object named SAVEGAME
+            (the toilets/beds) sends the global SAVEGAME event and then loads MainMenu. We insert our action at index 0 of the
+            state that sends SAVEGAME. Only FSMs that PlayMaker already initialised are patched (initialising reloads the
+            actions from data and would drop ours); the rest are retried every second. Systems/InitializeControls also sends
+            SAVEGAME (control config) and is never hooked.
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Game.SaveHook.Tick(System.Boolean)">
+            <summary>force = full scan of every FSM (once per GAME load); otherwise only the pending SAVEGAME FSMs are retried.</summary>
+        </member>
+        <member name="M:Brega.Loader.Game.SaveHook.SendsSaveEvent(HutongGames.PlayMaker.FsmStateAction)">
+            <summary>True if any public field of the action is the SAVEGAME event (or names it).</summary>
+        </member>
+        <member name="T:Brega.Loader.Game.BregaSaveAction">
+            <summary>Our PlayMaker action: tells every mod the game is about to save, then lets the state continue.</summary>
+        </member>
+        <member name="F:Brega.ModApi.ModApi.ApiVersion">
+            <summary>Raised when the public API changes in a way mods can detect (BregaMod.MinApiVersion).</summary>
+        </member>
+        <member name="T:Brega.ModApi.CurrentScene">
+            <summary>The current Unity scene (MSCLoader name: CurrentScene).</summary>
+        </member>
+        <member name="T:Brega.ModApi.BregaLoader">
+            <summary>Read-only facts about the loader for mods.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaLoader.IsModPresent(System.String)">
+            <summary>True if a mod with this id is loaded (enabled or not).</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaLoader.GetModSettingsFolder(Brega.ModApi.BregaMod)">
+            <summary>
+            &lt;game&gt;/Brega/Config/&lt;id&gt;/ (created on first use). Port of MSCLoader's ModLoader.GetModSettingsFolder(this);
+            the files of the mod's old MSCLoader settings folder are copied here once, on the first run.
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaLoader.GetModAssetsFolder(Brega.ModApi.BregaMod)">
+            <summary>&lt;game&gt;/Brega/Assets/&lt;id&gt;/ (MSCLoader: ModLoader.GetModAssetsFolder).</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaLoader.SaveAllSettings">
+            <summary>Writes every changed settings file now.</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaLoader.Version">
+            <summary>Loader version (Brega/version.txt at build time).</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaLoader.CurrentSceneName">
+            <summary>Unity scene name as reported by Application.loadedLevelName.</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaLoader.GameFolder">
+            <summary>Game folder (parent of mywintercar_Data).</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaLoader.MenuOpen">
+            <summary>True while the Brega menu is open (mods may pause their own input then).</summary>
+        </member>
+        <member name="P:Brega.ModApi.BregaLoader.ConsoleOpen">
+            <summary>True while the console overlay is open (it takes the keyboard).</summary>
+        </member>
+        <member name="T:Brega.ModApi.BregaUI">
+            <summary>Simple message boxes drawn by the loader in the game's style.</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaUI.ShowYesNo(System.String,System.String,System.Action,System.Action)">
+            <summary>YES runs yes, NO runs no (both optional).</summary>
+        </member>
+        <member name="M:Brega.ModApi.BregaUI.ShowYesNoMessage(System.String,System.String,System.Action)">
+            <summary>MSCLoader name (ModUI.ShowYesNoMessage) for ShowYesNo.</summary>
+        </member>
+        <member name="T:Brega.ModApi.ModLogger">
+            <summary>
+            Per-mod log (BregaMod.Logger). Lines go to Brega/loader.log, to Unity's output_log with the prefix "[Brega][modId]",
+            and to the in-game console (toggle key, default BackQuote, and the CONSOLE tab of the mods menu).
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLogger.Print(System.String)">
+            <summary>A plain console line (MSCLoader: ModConsole.Print).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLogger.Info(System.String)">
+            <summary>An informational line (MSCLoader: ModConsole.Log).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLogger.Log(System.String)">
+            <summary>Same as Info (MSCLoader name).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLogger.Warning(System.String)">
+            <summary>A yellow warning line.</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLogger.Error(System.String)">
+            <summary>A red error line.</summary>
+        </member>
+        <member name="T:Brega.ModApi.ModConsole">
+            <summary>
+            Static console access (same names as MSCLoader's static ModConsole, so ported calls compile unchanged). Lines are
+            tagged with the mod whose callback or command is running ("console" otherwise). Also opens/closes the overlay.
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.ModConsole.Clear">
+            <summary>Clears the console lines (loader.log keeps them).</summary>
+        </member>
+        <member name="P:Brega.ModApi.ModConsole.IsOpen">
+            <summary>True while the console overlay is shown.</summary>
+        </member>
+        <member name="T:Brega.ModApi.ConsoleCommand">
+            <summary>
+            Class-style console command (port of MSCLoader's ConsoleCommand): subclass it and pass an instance to
+            <see cref="M:Brega.ModApi.Commands.Add(Brega.ModApi.ConsoleCommand)"/>. Run receives the words after the command name.
+            </summary>
+        </member>
+        <member name="P:Brega.ModApi.ConsoleCommand.Name">
+            <summary>One word, case-insensitive.</summary>
+        </member>
+        <member name="P:Brega.ModApi.ConsoleCommand.Help">
+            <summary>One line shown by "help".</summary>
+        </member>
+        <member name="P:Brega.ModApi.ConsoleCommand.Aliases">
+            <summary>Other names for the same command (optional).</summary>
+        </member>
+        <member name="P:Brega.ModApi.ConsoleCommand.ShowInHelp">
+            <summary>False hides the command from "help" (it still runs).</summary>
+        </member>
+        <member name="T:Brega.ModApi.Commands">
+            <summary>
+            Console commands typed in the console overlay or the CONSOLE tab ("help" lists them, "help &lt;name&gt;" shows one).
+            Words are split on spaces; "double quotes" keep spaces inside one argument.
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.Commands.Register(System.String,System.String,System.Action{System.String[]})">
+            <summary>Registers a command; run receives the words after the command name. Re-registering a name replaces it.</summary>
+        </member>
+        <member name="M:Brega.ModApi.Commands.Register(System.String,System.String,System.Action{System.String[]},System.String[])">
+            <summary>Registers a command with aliases (other names for it).</summary>
+        </member>
+        <member name="M:Brega.ModApi.Commands.Add(Brega.ModApi.ConsoleCommand)">
+            <summary>Registers a class-style command (MSCLoader: ConsoleCommand.Add(new MyCommand())).</summary>
+        </member>
+        <member name="M:Brega.ModApi.Commands.Exists(System.String)">
+            <summary>True if a command (or alias) with this name exists.</summary>
+        </member>
+        <member name="M:Brega.ModApi.Commands.Execute(System.String)">
+            <summary>Runs a command line as if typed in the console. Returns false if the line is empty or the command unknown.</summary>
+        </member>
+        <member name="T:Brega.ModApi.PlayMakerExtensions">
+            <summary>
+            PlayMaker helpers for mods (our own implementation on top of the public PlayMaker API). The method names and
+            parameter lists match the MSCLoader helpers BregaMP calls, so a port only changes the namespace:
+            <c>MSCLoader.PlayMakerExtensions.AddGlobalTransition(fsm, ev, state)</c> becomes
+            <c>PlayMakerExtensions.AddGlobalTransition(fsm, ev, state)</c> with <c>using Brega.ModApi;</c>. All are also
+            extension methods (<c>fsm.GetState("x")</c>). Null arguments or missing states/FSMs return null / false; nothing throws
+            for a missing game object.
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.GetPlayMaker(UnityEngine.GameObject,System.String)">
+            <summary>The PlayMakerFSM on obj whose FsmName is playMakerName (null if none).</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.GetPlayMakerState(UnityEngine.GameObject,System.String)">
+            <summary>The first state called stateName in any PlayMakerFSM on obj (null if none).</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.InitializeFSM(PlayMakerFSM)">
+            <summary>
+            Makes sure the FSM's data and every state's actions are loaded, so states can be edited before the FSM first ran
+            (for example FSMs on inactive objects).
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.AddState(PlayMakerFSM,System.String)">
+            <summary>Adds an empty state (or returns the existing one with that name).</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.GetEvent(PlayMakerFSM,System.String)">
+            <summary>The FSM's event called eventName (null if the FSM does not use it).</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.AddEvent(PlayMakerFSM,System.String)">
+            <summary>Adds the event to the FSM (the global PlayMaker event of that name is created if needed).</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.AddGlobalTransition(PlayMakerFSM,System.String,System.String)">
+            <summary>Adds a global transition: sending eventName to the FSM (SendEvent) jumps to stateName from any state.</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.AddTransition(HutongGames.PlayMaker.FsmState,System.String,System.String)">
+            <summary>Adds a transition from fs to stateName on eventName.</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.GetVariable``1(PlayMakerFSM,System.String)">
+            <summary>The FSM variable called name, if it has type T (FsmBool, FsmFloat, FsmGameObject...); null otherwise.</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.InsertAction(HutongGames.PlayMaker.FsmState,System.Int32,HutongGames.PlayMaker.FsmStateAction)">
+            <summary>Inserts at index (index outside the list appends).</summary>
+        </member>
+        <member name="M:Brega.ModApi.PlayMakerExtensions.FsmInject(PlayMakerFSM,System.String,System.Action,System.Boolean,System.Int32,System.Boolean)">
+            <summary>
+            Runs hook when the FSM enters stateName (every frame while in it when everyFrame is true). index: where the hook
+            goes among the state's actions (-1 or past the end = last). replace: the hook replaces the action at index.
+            Returns false if the FSM or the state does not exist. Exceptions thrown by hook are logged, never passed to PlayMaker.
+            </summary>
+        </member>
+        <member name="T:Brega.ModApi.BregaFsmHook">
+            <summary>The PlayMaker action FsmInject adds: calls the hook on enter (and every frame when asked), then lets the state go on.</summary>
+        </member>
+        <member name="T:Brega.ModApi.ModUI">
+            <summary>Message boxes (same names as MSCLoader's ModUI). Drawn by the loader in the game's style, one at a time.</summary>
+        </member>
+        <member name="T:Brega.ModApi.ModLoader">
+            <summary>Loader facts (same names as MSCLoader's ModLoader).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLoader.IsModPresent(System.String)">
+            <summary>True if a mod with this id is loaded and enabled (like MSCLoader).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLoader.IsModPresent(System.String,System.Boolean)">
+            <summary>includeDisabled = true also counts a loaded but disabled mod.</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLoader.GetModSettingsFolder(Brega.ModApi.BregaMod)">
+            <summary>&lt;game&gt;/Brega/Config/&lt;id&gt;/ (the old MSCLoader folder's files are copied there once).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModLoader.GetModAssetsFolder(Brega.ModApi.BregaMod)">
+            <summary>&lt;game&gt;/Brega/Assets/&lt;id&gt;/.</summary>
+        </member>
+        <member name="P:Brega.ModApi.ModLoader.CurrentScene">
+            <summary>The current scene: CurrentScene.MainMenu, CurrentScene.Game...</summary>
+        </member>
+        <member name="T:Brega.ModApi.Keybind">
+            <summary>
+            Keybinds (same names as MSCLoader's Keybind.Add). Call from OnSettings: the keybind is added to the settings of
+            the mod whose OnSettings is running, shows in its page and in the KEYBINDS tab, and is saved with its settings.
+            </summary>
+        </member>
+        <member name="T:Brega.ModApi.SettingItem">
+            <summary>Base of every item on a mod's settings page.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingItem.SetVisibility(System.Boolean)">
+            <summary>MSCLoader name: shows or hides the item.</summary>
+        </member>
+        <member name="P:Brega.ModApi.SettingItem.Id">
+            <summary>Storage id (empty for items that store nothing: headers, texts, buttons).</summary>
+        </member>
+        <member name="P:Brega.ModApi.SettingItem.Name">
+            <summary>Label shown in the menu.</summary>
+        </member>
+        <member name="P:Brega.ModApi.SettingItem.Visible">
+            <summary>Hidden items are not drawn.</summary>
+        </member>
+        <member name="P:Brega.ModApi.SettingItem.Help">
+            <summary>Optional help line drawn under the item.</summary>
+        </member>
+        <member name="T:Brega.ModApi.Setting`1">
+            <summary>A stored value with a default and a Changed event (fired only on user or code changes, not when loading).</summary>
+        </member>
+        <member name="M:Brega.ModApi.Setting`1.GetValue">
+            <summary>MSCLoader-style accessors, so ported code can keep .GetValue() / .SetValue().</summary>
+        </member>
+        <member name="T:Brega.ModApi.SettingHeader">
+            <summary>
+            Section title. A collapsible header folds the items below it (up to the next header) when clicked; Collapsed is
+            the current state (starts at the collapsedByDefault value, kept for the session).
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingText.GetValue">
+            <summary>MSCLoader name: the text.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingText.SetValue(System.String)">
+            <summary>MSCLoader name: changes the text.</summary>
+        </member>
+        <member name="P:Brega.ModApi.SettingText.Text">
+            <summary>The text can be changed at any time (e.g. a status line).</summary>
+        </member>
+        <member name="P:Brega.ModApi.SettingSlider.Decimals">
+            <summary>Decimals shown and kept (0-6).</summary>
+        </member>
+        <member name="P:Brega.ModApi.SettingSliderInt.ValueLabels">
+            <summary>Optional labels for each value (index = value - Min), like MSCLoader's text values.</summary>
+        </member>
+        <member name="T:Brega.ModApi.SettingDropDown">
+            <summary>Value is the selected index.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingDropDown.GetSelectedItemIndex">
+            <summary>MSCLoader name: the selected index.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingDropDown.SetSelectedItemIndex(System.Int32)">
+            <summary>MSCLoader name: selects an index (clamped to the list).</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingDropDown.GetSelectedItemName">
+            <summary>MSCLoader name: the selected item's text (null for an empty list).</summary>
+        </member>
+        <member name="T:Brega.ModApi.SettingKeybind">
+            <summary>A rebindable key with an optional modifier (e.g. LeftControl). Stored as names: {"key":"F9","modifier":"None"}.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingKeybind.GetKeybindDown">
+            <summary>MSCLoader name for GetKeyDown.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingKeybind.GetKeybind">
+            <summary>MSCLoader name for GetKey.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingKeybind.GetKeybindUp">
+            <summary>MSCLoader name for GetKeyUp.</summary>
+        </member>
+        <member name="M:Brega.ModApi.SettingKeybind.Describe">
+            <summary>"Ctrl+F9" style text for the menu.</summary>
+        </member>
+        <member name="T:Brega.ModApi.ModSettings">
+            <summary>
+            Builder for a mod's settings page (passed to BregaMod.OnSettings). Values persist to Brega/Config/&lt;modId&gt;.json
+            when they change and when the game quits.
+            </summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.Find(System.String)">
+            <summary>The value setting with this id, else the keybind with this id, else null.</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.FindKeybind(System.String)">
+            <summary>The keybind with this id, or null.</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.Header(System.String,System.Boolean,System.Boolean)">
+            <summary>A header that can fold its section (MSCLoader: AddHeader(text, collapsedByDefault, collapsible)).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.SliderInt(System.String,System.String,System.Int32,System.Int32,System.Int32,System.String[],System.Action{System.Int32})">
+            <summary>Integer slider with a text per value (index = value - min), like MSCLoader's AddSlider(..., textValues).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.AddHeader(System.String,System.Boolean,System.Boolean)">
+            <summary>A collapsible section header (MSCLoader headers always fold when clicked).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.AddSlider(System.String,System.String,System.Int32,System.Int32,System.Int32,System.Action,System.String[],System.Boolean)">
+            <summary>Integer slider; textValues (optional) is shown instead of the number (index = value - min).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.SaveNow">
+            <summary>Writes this mod's settings file now (normally done within 2 s of a change, on save and on quit).</summary>
+        </member>
+        <member name="M:Brega.ModApi.ModSettings.ResetAll">
+            <summary>Sets every stored value back to its default.</summary>
+        </member>
+        <member name="P:Brega.ModApi.ModSettings.ItemList">
+            <summary>The live list, for the loader's menu (no allocation per call).</summary>
+        </member>
+        <member name="T:Brega.Loader.Ui.BregaMenu">
+             <summary>
+             The in-game mods menu (IMGUI, styled like My Winter Car's pause menu): MODS tab (mod list with enable toggles +
+             the selected mod's settings, collapsible sections), KEYBINDS tab (every keybind of every mod, rebindable, with
+             conflict warnings), CONSOLE tab and ABOUT tab (loader settings). Opened by the menu key (default F8), the MODS
+             pause-menu button or the MODS corner button in the main menu.
+            
+             IMGUI rule: every decision that changes the NUMBER of controls (which tab, which mod, open dropdowns, error
+             labels, console lines, visible settings) is taken from a snapshot made on the Layout event and reused for the
+             other events of that pass, so mod OnGUI code that logs or fails between Layout and Repaint cannot change the
+             control count ("Getting control N's position in a group with only N controls").
+             </summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.BregaMenu.Tick">
+            <summary>
+            Per frame (Update): while the menu or a message is up keep the cursor free and the game's input blocked
+            (game FSMs may re-lock the cursor or reset PlayerInMenu).
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.BregaMenu.RefreshView">
+            <summary>Builds the snapshot. Called on the Layout event only (cheap: no per-mod closures or strings).</summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.BregaMenu.CaptureKey">
+            <summary>Waits for a key press for the keybind being edited (OnGUI key events).</summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.BregaMenu.RefreshKeybinds">
+            <summary>Snapshot of every keybind with its owner and conflicts (Layout only, KEYBINDS tab only).</summary>
+        </member>
+        <member name="P:Brega.Loader.Ui.BregaMenu.WantsKeyboard">
+            <summary>True while a key is being captured or a text field has keyboard focus.</summary>
+        </member>
+        <member name="T:Brega.Loader.Ui.MessageQueue">
+            <summary>Message boxes from BregaUI (one at a time, in order).</summary>
+        </member>
+        <member name="T:Brega.Loader.Ui.BregaStyle">
+            <summary>
+            IMGUI styles that look like My Winter Car's menus: dark-blue panels with white frames, yellow bold italic titles,
+            yellow button text and white body text. Textures are generated at runtime (no asset files). The game's font is
+            used when a dynamic one is found on a TextMesh in the scene.
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.BregaStyle.Framed(UnityEngine.Color,UnityEngine.Color,System.Int32)">
+            <summary>16x16 nine-slice texture: frame of `frame` px in frameColour, filled with fill.</summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.BregaStyle.Ensure">
+            <summary>Builds styles once per scene (call from OnGUI only) and sets the GUI scale for this frame.</summary>
+        </member>
+        <member name="T:Brega.Loader.Ui.BregaStyle.Textures">
+            <summary>Generated once per game session (styles are rebuilt per scene for the font, textures are not).</summary>
+        </member>
+        <member name="T:Brega.Loader.Ui.ConsoleView">
+            <summary>
+            Console lines + command field, used by the console overlay and by the CONSOLE tab of the mods menu.
+            Only a window of PageLines lines is drawn (scrollback: PageUp / PageDown / Home / End, or the buttons); the whole
+            buffer (LoaderLog.MaxConsoleLines) stays reachable. Up / Down walk the typed-command history (shared by both
+            views), Tab completes the command name, Enter runs the line.
+            IMGUI rule: what changes the number of controls is snapshotted in Refresh (Layout event only).
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.ConsoleView.RequestFocus">
+            <summary>Gives the command field keyboard focus on the next repaint.</summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.ConsoleView.Refresh">
+            <summary>Snapshot of the visible lines. Call on the Layout event only.</summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.ConsoleView.HandleKeys">
+            <summary>Keys for the field (before the TextField sees them). Returns true when the line should run.</summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.ConsoleView.Draw">
+            <summary>Draws the lines and the field inside the current GUILayout area.</summary>
+        </member>
+        <member name="T:Brega.Loader.Ui.ConsoleOverlay">
+            <summary>
+            The console overlay: a panel over the top of the screen, opened and closed with the console key (default
+            BackQuote, the key left of 1 on US layouts; rebindable in the KEYBINDS tab) or Esc. While it is open the game does not get
+            mouse-look or keys (same blocking as the mods menu) and mod keybinds stay quiet.
+            </summary>
+        </member>
+        <member name="M:Brega.Loader.Ui.ConsoleOverlay.Close">
+            <summary>Safe outside OnGUI (mods, commands): the field's keyboard focus is released on the next OnGUI.</summary>
+        </member>
+        <member name="T:Brega.Shared.BackupNaming">
+            <summary>Names of dated backup folders: "&lt;base&gt; - yyyy-MM-dd_HH-mm-ss", with " (2)", " (3)"... on a collision.</summary>
+        </member>
+        <member name="M:Brega.Shared.BackupNaming.Unique(System.String,System.Func{System.String,System.Boolean})">
+            <summary>First of name, "name (2)", "name (3)"... for which exists() is false.</summary>
+        </member>
+        <member name="M:Brega.Shared.BackupNaming.TryExtractStamp(System.String,System.DateTime@)">
+            <summary>Extracts the stamp from "base - stamp" or "base - stamp (n)", or from "removed-stamp".</summary>
+        </member>
+        <member name="M:Brega.Shared.BackupNaming.SortNewestFirst(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Folder names with a parsable stamp, newest first (then by name); names without a stamp go last.</summary>
+        </member>
+        <member name="T:Brega.Shared.CommandLine">
+            <summary>Console line parsing (pure; used by the in-game console and the unit tests).</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandLine.Split(System.String)">
+            <summary>
+            Splits a console line into words. Spaces and tabs separate words; "double quotes" keep spaces inside one
+            word (an empty "" is an empty word); inside quotes \" is a literal quote and \\ a backslash.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.CommandLine.TryParse(System.String,System.String@,System.String[]@)">
+            <summary>First word = command name, the rest = arguments. False for an empty line.</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandLine.IsValidName(System.String)">
+            <summary>A command name is one word: not empty, no whitespace, no quotes.</summary>
+        </member>
+        <member name="T:Brega.Shared.CommandRegistry`1">
+            <summary>
+            Console commands by name (case-insensitive) with optional aliases, help text and owner (mod id).
+            THandler is the run delegate on the loader side; the registry itself is pure.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.CommandRegistry`1.Register(System.String,System.String,System.String,`0,System.String[],System.Boolean)">
+            <summary>
+            Registers (or replaces) a command. Aliases that are invalid, equal to the name, or already used by another
+            command's name/alias are ignored (the accepted ones are in the returned entry). Throws ArgumentException for an
+            invalid name and ArgumentNullException for a null handler.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.CommandRegistry`1.UnregisterOwner(System.String)">
+            <summary>Removes every command registered by owner. Returns how many.</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandRegistry`1.Find(System.String)">
+            <summary>Finds a command by name or alias (null if unknown).</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandRegistry`1.HelpLines(System.String)">
+            <summary>"name - help (also: a, b)" for every visible command, or the lines for one topic.</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandRegistry`1.Complete(System.String,System.Collections.Generic.List{System.String}@)">
+            <summary>
+            Tab completion of the command name (first word only). One match: the name plus a space. Several: their
+            longest common prefix (candidates lists them). Otherwise the input comes back unchanged.
+            </summary>
+        </member>
+        <member name="T:Brega.Shared.CommandHistory">
+            <summary>Typed-command history for the console (Up = older, Down = newer).</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandHistory.Add(System.String)">
+            <summary>Adds a submitted line (empty lines and an exact repeat of the last line are not stored).</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandHistory.Older(System.String)">
+            <summary>Up arrow: the previous line (current is remembered as the draft on the first step).</summary>
+        </member>
+        <member name="M:Brega.Shared.CommandHistory.Newer(System.String)">
+            <summary>Down arrow: the next line, and finally the draft typed before browsing.</summary>
+        </member>
+        <member name="T:Brega.Shared.Scrollback">
+            <summary>Which console lines a window of `visible` lines shows when scrolled `offset` lines up from the end.</summary>
+        </member>
+        <member name="M:Brega.Shared.Scrollback.Start(System.Int32,System.Int32,System.Int32)">
+            <summary>Index of the first shown line (count = Math.Min(visible, total)).</summary>
+        </member>
+        <member name="T:Brega.Shared.IniFile">
+            <summary>
+            Minimal INI reader/writer with the same rules as the native parser (brega/Loader/native/ini.c):
+            [Section] headers, ';' and '#' comment lines, inline " ;" / " #" comments on unquoted values, trimmed
+            keys and values, "..." or '...' quoting, case-insensitive lookups, last duplicate wins,
+            booleans true/1/yes/on and false/0/no/off. Keys before any header belong to section "".
+            Section and key order is kept for writing.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.IniFile.ParseBool(System.String)">
+            <summary>1 for a true word, 0 for a false word, -1 otherwise.</summary>
+        </member>
+        <member name="M:Brega.Shared.IniFile.Keys(System.String)">
+            <summary>Keys of a section in file order (empty list if the section is missing).</summary>
+        </member>
+        <member name="T:Brega.Shared.IFileSystem">
+            <summary>File access used by the planner and executor (a fake in tests, RealFileSystem in the launcher).</summary>
+        </member>
+        <member name="M:Brega.Shared.IFileSystem.ListFiles(System.String)">
+            <summary>Absolute paths of all files under dir (recursive); empty if dir is missing.</summary>
+        </member>
+        <member name="T:Brega.Shared.PackageManifest">
+            <summary>brega-package.ini: [Package] version = x.y.z; [Files] relative\path = sha256.</summary>
+        </member>
+        <member name="T:Brega.Shared.InstallPlanner">
+            <summary>
+            Builds the exact list of file operations for Install/Update and Uninstall. Pure: reads through IFileSystem only and
+            never changes anything. Nothing is ever deleted: replaced or removed files are MOVED into Brega\Backup.
+            </summary>
+        </member>
+        <member name="F:Brega.Shared.InstallPlanner.OriginalFiles">
+            <summary>Third-party loader files moved aside on the first install (MSCLoader + Unity Doorstop).</summary>
+        </member>
+        <member name="F:Brega.Shared.InstallPlanner.OwnFiles">
+            <summary>Files that belong to the Brega Loader itself (removed on uninstall). Mods and Config are separate.</summary>
+        </member>
+        <member name="F:Brega.Shared.InstallPlanner.DataDirs">
+            <summary>Folders the in-game loader writes to (logs, settings) or reads mods from; created at install time.</summary>
+        </member>
+        <member name="M:Brega.Shared.InstallPlanner.HashOf(Brega.Shared.IFileSystem,System.String,Brega.Shared.InstallPlan)">
+            <summary>Hash of a file, or null with an error added to the plan (file locked, unreadable...).</summary>
+        </member>
+        <member name="T:Brega.Shared.InstallExecutor">
+            <summary>Runs a plan, writes a journal (Brega\Backup\&lt;stamp&gt;\journal.ini) and rolls back on the first failure.</summary>
+        </member>
+        <member name="T:Brega.Shared.KeyBindingInfo">
+            <summary>One keybind as plain numbers (Unity KeyCode values), for conflict checks without UnityEngine.</summary>
+        </member>
+        <member name="T:Brega.Shared.KeybindConflicts">
+            <summary>
+            Finds keybinds that fire on the same key press. A bind without modifier also fires while a modifier is held
+            (that is how SettingKeybind.GetKeyDown works), so F10 conflicts with Ctrl+F10; Ctrl+F10 and Shift+F10 do not.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.KeybindConflicts.ConflictsOf(System.Collections.Generic.IList{Brega.Shared.KeyBindingInfo},System.Int32)">
+            <summary>Indexes of the binds that overlap all[index] (empty list if none).</summary>
+        </member>
+        <member name="M:Brega.Shared.KeybindConflicts.Describe(System.Int32,System.Int32)">
+            <summary>"Ctrl+F10" style text.</summary>
+        </member>
+        <member name="M:Brega.Shared.KeybindConflicts.DescribeAll(System.Collections.Generic.IList{Brega.Shared.KeyBindingInfo})">
+            <summary>One sentence per conflicting pair, e.g. "F10: BregaFPS 'FPS counter' and Brega 'Open the menu'".</summary>
+        </member>
+        <member name="T:Brega.Shared.KeyNames">
+            <summary>
+            Unity 5.0 KeyCode numbers and names, without referencing UnityEngine (the launcher and tests have no Unity).
+            Used to turn MSCLoader's numeric keybinds (290 = F9) into the names Brega stores ("F9").
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.KeyNames.NameOf(System.Int32)">
+            <summary>Name for a KeyCode number; unknown numbers come back as the number text (still parsable by the loader).</summary>
+        </member>
+        <member name="M:Brega.Shared.KeyNames.CodeOf(System.String)">
+            <summary>KeyCode number for a name or a number text; -1 if unknown.</summary>
+        </member>
+        <member name="T:Brega.Shared.MiniJson">
+            <summary>
+            Small JSON reader/writer, culture-independent (InvariantCulture), no third-party code.
+            Parse gives Dictionary&lt;string, object&gt; (insertion order kept), List&lt;object&gt;, string, long (integers),
+            double (other numbers), bool or null. Throws FormatException on bad input.
+            </summary>
+        </member>
+        <member name="T:Brega.Shared.ModConfig">
+            <summary>
+            One mod's persisted settings: Brega/Config/&lt;modId&gt;.json
+            {"version":1,"enabled":true,"settings":{"id":value},"keybinds":{"id":{"key":"F9","modifier":"None"}}}.
+            Unknown keys (top level and inside settings/keybinds) are kept on save. Colours are "r,g,b,a" strings
+            (MSCLoader's format, so imported values work unchanged).
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.ModConfig.LoadFile(System.String,System.String@)">
+            <summary>
+            Loads path. Missing file: defaults, problem = null, unless a save was interrupted (see SaveFile): then the
+            complete "&lt;name&gt;.tmp" or, failing that, the previous "&lt;name&gt;.bak" is used and problem says so.
+            Corrupt file: renamed to "&lt;name&gt;.bad" (or ".bad2"...), defaults returned and problem describes what happened.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.ModConfig.SaveFile(System.String)">
+            <summary>
+            Crash-safe save: write "&lt;name&gt;.tmp" completely, move the current file to "&lt;name&gt;.bak", move the .tmp into
+            place, then remove the .bak. At every instant either the file, a complete .tmp or the .bak exists, and
+            LoadFile picks it up. (Only Move/Delete, which exist in every Mono the game may ship.)
+            </summary>
+        </member>
+        <member name="T:Brega.Shared.ColourText">
+            <summary>"r,g,b,a" colour text (bytes), MSCLoader-compatible.</summary>
+        </member>
+        <member name="T:Brega.Shared.MscImport">
+            <summary>
+            One-time import of MSCLoader settings (read-only):
+            Mods/Config/Mod Settings/&lt;ID&gt;/settings.json = {"isDisabled":false,"settings":[{"ID":..,"Value":..}]}
+            and keybinds.json = {"keybinds":[{"ID":..,"Key":&lt;KeyCode int&gt;,"Modifier":&lt;KeyCode int&gt;}]}.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.MscImport.Import(Brega.Shared.ModConfig,System.String,System.String)">
+            <summary>Copies values into cfg (existing Brega values are overwritten). Returns how many values were imported.
+            Either text may be null. Throws FormatException if a given text is not valid JSON.</summary>
+        </member>
+        <member name="T:Brega.Shared.ErrorBudget">
+            <summary>Error budget for one mod: trips after WindowLimit errors within WindowSeconds, or TotalLimit errors overall.</summary>
+        </member>
+        <member name="M:Brega.Shared.ErrorBudget.Record(System.Double)">
+            <summary>Records one error at time now (seconds). Returns true only on the call that trips the budget.</summary>
+        </member>
+        <member name="T:Brega.Shared.MscMigration">
+             <summary>
+             One-time move-over from MSCLoader for a ported mod (same id, e.g. "MWCOnline" or "BregaFPS"). Everything here only
+             READS the MSCLoader folders; it writes only into Brega's own config folder.
+            
+             1. Settings: settings.json + keybinds.json become values in Brega/Config/&lt;id&gt;.json (MscImport), when that file
+                does not exist yet.
+             2. Free-form files: everything else in the mod's MSCLoader settings folder (what the mod wrote through
+                ModLoader.GetModSettingsFolder: profiles, scene.cfg, markers...) is COPIED into Brega/Config/&lt;id&gt;/, when
+                that folder does not exist yet. Existing files are never overwritten; the MSCLoader folder is left untouched.
+             Both steps are recorded under "migrated" in the mod's config file, so they run once.
+             </summary>
+        </member>
+        <member name="F:Brega.Shared.MscMigration.DefaultMaxBytes">
+            <summary>Copy budget for the free-form files (a folder bigger than this is copied up to the limit).</summary>
+        </member>
+        <member name="M:Brega.Shared.MscMigration.OriginalDir(System.String,System.String)">
+            <summary>MSCLoader's folder for a mod: &lt;game&gt;/Mods/Config/Mod Settings/&lt;id&gt;.</summary>
+        </member>
+        <member name="M:Brega.Shared.MscMigration.LauncherCopyDir(System.String,System.String)">
+            <summary>The launcher's copy of the MSCLoader settings: Brega/Config/MSCLoader/&lt;id&gt;.</summary>
+        </member>
+        <member name="M:Brega.Shared.MscMigration.SettingsSources(System.String,System.String,System.String)">
+            <summary>Where settings are imported from, in order (the first folder holding settings.json or keybinds.json wins).</summary>
+        </member>
+        <member name="M:Brega.Shared.MscMigration.FileSources(System.String,System.String,System.String)">
+            <summary>Where free-form files are copied from: the original folder (complete), else the launcher's copy.</summary>
+        </member>
+        <member name="M:Brega.Shared.MscMigration.MarkMigrated(Brega.Shared.ModConfig,System.String,System.String,System.Int32,System.DateTime)">
+            <summary>Records a finished step: "migrated":{"files":{"from":"MSCLoader","dir":..,"count":n,"at":"ISO UTC"}}.</summary>
+        </member>
+        <member name="M:Brega.Shared.MscMigration.PlanFileCopy(System.String,System.String,System.Int64,System.Collections.Generic.List{System.String})">
+            <summary>
+            Lists the files to copy from src to dst (recursive, sorted): every file except the top-level settings.json /
+            keybinds.json, leftovers of interrupted writes (*.tmp), files that already exist in dst, and anything past
+            maxBytes (listed in skipped with the reason). src missing = empty plan.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.MscMigration.CopyFiles(System.String,System.String,System.Collections.Generic.List{Brega.Shared.MscMigration.FileItem},System.Collections.Generic.List{System.String})">
+            <summary>
+            Copies the planned files (never overwrites: a file that appeared in the meantime is skipped). Returns how many
+            were copied; failures are added to problems and the rest continues. Each file is copied to a temporary name
+            first and renamed when complete, so an interrupted copy (disk full, crash) never leaves a truncated file under
+            the real name for the mod to read.
+            </summary>
+        </member>
+        <member name="T:Brega.Shared.MscMigration.FileItem">
+            <summary>One file to copy: path relative to the source folder, and its size.</summary>
+        </member>
+        <member name="T:Brega.Shared.VdfNode">
+            <summary>A Valve KeyValues (VDF/ACF) node: string values and child blocks, case-insensitive keys, file order kept.</summary>
+        </member>
+        <member name="T:Brega.Shared.VdfParser">
+            <summary>Parser for Steam's libraryfolders.vdf and appmanifest_*.acf (KeyValues text format).</summary>
+        </member>
+        <member name="T:Brega.Shared.SteamLocator">
+            <summary>Finds a Steam game from libraryfolders.vdf + appmanifest. File access goes through delegates so it can be tested.</summary>
+        </member>
+        <member name="M:Brega.Shared.SteamLocator.RunWithArgsUrl(System.String,System.String)">
+            <summary>steam://run/&lt;appid&gt;//&lt;args&gt;/ : starts the game through Steam with extra launch arguments (URL-escaped).</summary>
+        </member>
+        <member name="M:Brega.Shared.SteamLocator.LibraryFolders(System.String,System.String,System.String)">
+            <summary>Library paths from libraryfolders.vdf, both the new ("0" { "path" ... "apps" {...} }) and the old ("1" "D:\\Lib") format.
+            The Steam root is always first. If appId is given, libraries whose "apps" block lists it come right after the root.</summary>
+        </member>
+        <member name="T:Brega.Shared.VersionUtil">
+            <summary>
+            Version strings like "0.7.0", "v0.10", "1.2.3-beta2", "1.0+build5".
+            Rules: optional v/V prefix; numeric dot parts compared as numbers (missing parts = 0, so 1.0 == 1.0.0);
+            a pre-release tag after '-' sorts before the release (1.0-beta &lt; 1.0); build metadata after '+' is ignored;
+            invalid versions sort before every valid one, and two invalid ones compare as plain text.
+            </summary>
+        </member>
+        <member name="M:Brega.Shared.VersionUtil.Compare(System.String,System.String)">
+            <summary>Negative if a &lt; b, 0 if equal, positive if a &gt; b.</summary>
+        </member>
+    </members>
+</doc>

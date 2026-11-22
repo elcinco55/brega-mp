@@ -1,0 +1,16 @@
+; Brega Loader configuration. Paths are relative to the game folder.
+; Hold Shift while the game starts, or add -brega-disable to the launch options, to boot without Brega.
+[Brega]
+enabled = true
+loader = Brega\Brega.Loader.dll
+entry_type = Brega.Loader.Entry
+entry_method = Init
+host_exe = mywintercar.exe
+
+[Log]
+native_log = Brega\loader_native.log
+verbose = false
+unity_log_to_game_root = true
+
+[Safety]
+skip_key = shift

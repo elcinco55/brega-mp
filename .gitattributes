@@ -1,0 +1,6 @@
+# Everything here must reach the mirrors byte for byte: the manifest is signed and the files are named by their SHA-256.
+* -text
+*.dll binary
+*.exe binary
+files/* binary
+channels/** -text

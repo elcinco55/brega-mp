@@ -1,0 +1,60 @@
+{
+  "format": 1,
+  "product": "brega",
+  "channel": "stable",
+  "version": "0.7.0",
+  "published": "2026-11-22T05:40:58Z",
+  "min_launcher_version": "",
+  "notes": "Brega 0.7.0: radio shuffle, Brega Loader, launcher mirrors.",
+  "files": [
+    {
+      "path": "Brega/brega.ini",
+      "size": 424,
+      "sha256": "9d1c49d73b063df71e0288ee3323e7b12c580eb704c54f1194b78465caae1607",
+      "role": "config"
+    },
+    {
+      "path": "Brega/Brega.Loader.dll",
+      "size": 131584,
+      "sha256": "a535b4109dff297c55c3fb0c5de3174aee640fafb3a660aacba7e5edcfc36c4b",
+      "role": "loader-managed"
+    },
+    {
+      "path": "Brega/Brega.Loader.xml",
+      "size": 60250,
+      "sha256": "a71843c365ea4a37401a74abf3ab4c4bf71708317fb3d0d183ad67e179cce33d",
+      "role": "loader-managed"
+    },
+    {
+      "path": "Brega/Mods/BregaFPS.dll",
+      "size": 116736,
+      "sha256": "538fdc051f418d0340f60a53750c73916507422f13ca90d2235ca4e48e5df5b4",
+      "role": "mod"
+    },
+    {
+      "path": "Brega/Mods/BregaMP.dll",
+      "size": 1345024,
+      "sha256": "3a4d2f8ce1d1cacaefaf747cbeac0b5b138e9c563629d261455a07d0922bfce1",
+      "role": "mod"
+    },
+    {
+      "path": "Brega/version.txt",
+      "size": 7,
+      "sha256": "966d87547cf763b2acac8723db5c1615c6a41fcc63adfce50a13f106b6311188",
+      "role": "config"
+    },
+    {
+      "path": "BregaLauncher.exe",
+      "size": 4142592,
+      "sha256": "90a42396157f2da764a6ffd9f0b03476a24bea55b6a8236923fb5eed813c43ac",
+      "role": "launcher",
+      "version": "0.7.0"
+    },
+    {
+      "path": "winhttp.dll",
+      "size": 173056,
+      "sha256": "1469ec90e420a06148a50d32249bcb3dd2a50d97044ffe8889932cb72ebd4b75",
+      "role": "loader-native"
+    }
+  ]
+}
